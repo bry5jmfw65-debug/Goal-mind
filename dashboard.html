@@ -50,7 +50,14 @@ input[type=file]{display:none}.pick{display:inline-block;background:#1683ff;colo
     <div class="stat"><span class="muted">Average confidence</span><b id="avg">—</b></div>
   </div>
 
-  <div class="section-title"><h2>Prediction cards</h2><span id="filterText" class="muted"></span></div>
+  <div class="section-title">
+    <h2>Prediction cards</h2>
+    <div class="controls" style="margin:0">
+      <button class="btn secondary" onclick="setFilter('all')">All</button>
+      <button class="btn secondary" onclick="setFilter('high')">High confidence</button>
+      <button class="btn secondary" onclick="setFilter('top')">Top picks</button>
+    </div>
+  </div>
   <div id="cards" class="cards"><div class="empty">Upload a screenshot to generate prediction cards.</div></div>
   <div class="note">⚠️ Probabilities are estimates generated from the detected market odds. They are not guarantees or financial advice. Always verify the fixture and odds before acting.</div>
 </div>
@@ -60,7 +67,7 @@ const fileEl=document.getElementById('file'), preview=document.getElementById('p
 const statusEl=document.getElementById('status'), analyzeBtn=document.getElementById('analyze');
 const clearBtn=document.getElementById('clear'), cards=document.getElementById('cards');
 const progress=document.getElementById('progress'), bar=document.getElementById('bar');
-let currentFile=null;
+let currentFile=null, allMatches=[], activeFilter='all';
 
 fileEl.addEventListener('change',e=>{
   currentFile=e.target.files?.[0]; if(!currentFile)return;
@@ -160,27 +167,62 @@ function makePrediction(name,odds){
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function render(matches){
- document.getElementById('summary').style.display=matches.length?'grid':'none';
- document.getElementById('count').textContent=matches.length;
- if(!matches.length){cards.innerHTML='<div class="empty">No complete 1X2 rows were confidently detected. Try a clearer screenshot with the odds visible.</div>';return}
- const top=[...matches].sort((a,b)=>b.confidence-a.confidence)[0];
+ allMatches=matches||[];
+ document.getElementById('summary').style.display=allMatches.length?'grid':'none';
+ document.getElementById('count').textContent=allMatches.length;
+ if(!allMatches.length){
+   cards.innerHTML='<div class="empty">No complete 1X2 rows were confidently detected. Try a clearer screenshot with the odds visible.</div>';
+   return;
+ }
+ // Rank by a blend of confidence and probability edge over the runner-up.
+ allMatches.forEach(m=>{
+   const sorted=[...m.p].sort((a,b)=>b-a);
+   m.edge=sorted[0]-sorted[1];
+   m.score=Math.round(m.confidence*0.65+m.edge*0.35);
+ });
+ allMatches.sort((a,b)=>b.score-a.score);
+ const top=allMatches[0];
  document.getElementById('topPick').textContent=top.choice;
- document.getElementById('avg').textContent=Math.round(matches.reduce((s,m)=>s+m.confidence,0)/matches.length)+'%';
- document.getElementById('filterText').textContent='Sorted by screenshot order';
- cards.innerHTML=matches.map((m,i)=>`
- <article class="card ${i===matches.indexOf(top)?'top':''}">
-   <div class="match">${esc(m.name)}</div>
-   <div class="odds">Detected 1X2 odds: ${m.odds.map(x=>x.toFixed(2)).join(' · ')}</div>
-   <div class="pickrow"><div><div class="muted">Model pick</div><div class="pickname">${esc(m.choice)}</div></div><div class="badge">${m.confidence}% confidence</div></div>
-   <div class="bars">
-    <div class="line"><span>Home</span><div class="track"><div class="fill" style="width:${m.p[0]}%"></div></div><b>${m.p[0].toFixed(1)}%</b></div>
-    <div class="line"><span>Draw</span><div class="track"><div class="fill" style="width:${m.p[1]}%"></div></div><b>${m.p[1].toFixed(1)}%</b></div>
-    <div class="line"><span>Away</span><div class="track"><div class="fill" style="width:${m.p[2]}%"></div></div><b>${m.p[2].toFixed(1)}%</b></div>
-   </div>
-   <div class="meta"><span>Market: 1X2</span><span>Pick: ${esc(m.choice)}</span></div>
-   <div class="note">Probability is derived from the detected market prices after normalizing implied probabilities. OCR can make mistakes, so verify the displayed fixture and odds.</div>
- </article>`).join('');
- localStorage.setItem('goalmind_last_analysis',JSON.stringify(matches));
+ document.getElementById('avg').textContent=Math.round(allMatches.reduce((s,m)=>s+m.confidence,0)/allMatches.length)+'%';
+ drawCards();
+ localStorage.setItem('goalmind_last_analysis',JSON.stringify(allMatches));
+}
+function setFilter(filter){
+ activeFilter=filter;
+ drawCards();
+}
+function drawCards(){
+ let matches=allMatches;
+ if(activeFilter==='high') matches=matches.filter(m=>m.confidence>=70);
+ if(activeFilter==='top') matches=matches.slice(0,3);
+ document.getElementById('filterText').textContent =
+   activeFilter==='all' ? `${matches.length} matches` :
+   activeFilter==='high' ? `${matches.length} high-confidence matches` :
+   `${matches.length} top picks`;
+ if(!matches.length){
+   cards.innerHTML='<div class="empty">No matches meet this filter.</div>';
+   return;
+ }
+ cards.innerHTML=matches.map((m,i)=>{
+   const globalIndex=allMatches.indexOf(m);
+   const quality=m.confidence>=80?'High':m.confidence>=65?'Medium':'Low';
+   return `
+   <article class="card ${globalIndex===0?'top':''}">
+     <div class="match">${esc(m.name)}</div>
+     <div class="odds">Detected 1X2 odds: ${m.odds.map(x=>x.toFixed(2)).join(' · ')}</div>
+     <div class="pickrow">
+       <div><div class="muted">Model pick</div><div class="pickname">${esc(m.choice)}</div></div>
+       <div class="badge">${m.confidence}% ${quality}</div>
+     </div>
+     <div class="bars">
+       <div class="line"><span>Home</span><div class="track"><div class="fill" style="width:${m.p[0]}%"></div></div><b>${m.p[0].toFixed(1)}%</b></div>
+       <div class="line"><span>Draw</span><div class="track"><div class="fill" style="width:${m.p[1]}%"></div></div><b>${m.p[1].toFixed(1)}%</b></div>
+       <div class="line"><span>Away</span><div class="track"><div class="fill" style="width:${m.p[2]}%"></div></div><b>${m.p[2].toFixed(1)}%</b></div>
+     </div>
+     <div class="meta"><span>Market: 1X2</span><span>Signal gap: ${m.edge.toFixed(1)}%</span></div>
+     <div class="note">This ranking uses the detected market prices and the separation between the strongest and second-strongest implied probabilities. It is an estimate, not a guarantee. Verify the fixture and odds because OCR can make mistakes.</div>
+   </article>`;
+ }).join('');
 }
 function logout(){localStorage.removeItem('goalmind_user');location.href='index.html'}
 </script>
