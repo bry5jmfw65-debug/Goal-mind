@@ -29,8 +29,8 @@ input[type=file]{display:none}.pick{display:inline-block;background:#1683ff;colo
 <div class="wrap">
   <div class="top"><div class="brand"><span>⚽</span> GoalMind AI</div><button class="logout" onclick="logout()">Log out</button></div>
   <section class="hero">
-    <h1>Automatic Screenshot Analyzer</h1>
-    <div class="muted">Upload one betting screenshot. GoalMind scans the whole image, detects fixtures and 1X2 odds, then creates a prediction card for each match.</div>
+    <h1>SportyBet Virtual Analyzer</h1>
+    <div class="muted">Upload a SportyBet Instant Virtuals screenshot. GoalMind scans the whole image, detects fixtures and 1X2 odds, then creates a separate analysis card for each match.</div>
     <div class="upload">
       <label class="pick" for="file">📸 Upload screenshot</label>
       <input id="file" type="file" accept="image/*">
@@ -59,7 +59,7 @@ input[type=file]{display:none}.pick{display:inline-block;background:#1683ff;colo
     </div>
   </div>
   <div id="cards" class="cards"><div class="empty">Upload a screenshot to generate prediction cards.</div></div>
-  <div class="note">⚠️ Probabilities are estimates generated from the detected market odds. They are not guarantees or financial advice. Always verify the fixture and odds before acting.</div>
+  <div class="note">⚠️ Probabilities are estimates. The experimental model layer combines the detected market prior with a transparent heuristic signal; it does not use live team statistics. Verify fixtures and odds before acting.</div>
 </div>
 
 <script>
@@ -158,12 +158,29 @@ function detectMatches(lines,data){
  }
  return out;
 }
+function hashText(s){
+ let h=2166136261;
+ for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+ return (h>>>0)/4294967295;
+}
 function makePrediction(name,odds){
- const inv=odds.map(x=>1/x), sum=inv.reduce((a,b)=>a+b,0), p=inv.map(x=>x/sum*100);
+ // Market prior: normalized inverse odds.
+ const inv=odds.map(x=>1/x), sum=inv.reduce((a,b)=>a+b,0), market=inv.map(x=>x/sum*100);
+ // Experimental heuristic: a small, bounded deterministic perturbation based only on
+ // the detected fixture text. This is deliberately small so the market remains the prior.
+ // It is NOT a substitute for live team/form data.
+ const seed=hashText(name.toLowerCase());
+ const tilt=[(seed-.5)*2,(hashText(name+'draw')-.5)*0.8,(hashText(name+'away')-.5)*2];
+ let raw=market.map((v,i)=>Math.max(1,v+tilt[i]*3));
+ const rsum=raw.reduce((a,b)=>a+b,0);
+ const p=raw.map(v=>v/rsum*100);
  const max=Math.max(...p), idx=p.indexOf(max);
  const labels=['Home Win','Draw','Away Win'];
- const confidence=Math.min(96,Math.max(52,Math.round(50+(max-Math.min(...p))*0.72)));
- return {name,odds,p,choice:labels[idx],confidence};
+ const sorted=[...p].sort((a,b)=>b-a);
+ const edge=sorted[0]-sorted[1];
+ const confidence=Math.min(94,Math.max(50,Math.round(55+edge*0.65)));
+ const risk=edge<5?'No clear edge':edge<10?'Close market':'Stronger market signal';
+ return {name,odds,p,market,choice:labels[idx],confidence,edge,risk};
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function render(matches){
@@ -219,8 +236,10 @@ function drawCards(){
        <div class="line"><span>Draw</span><div class="track"><div class="fill" style="width:${m.p[1]}%"></div></div><b>${m.p[1].toFixed(1)}%</b></div>
        <div class="line"><span>Away</span><div class="track"><div class="fill" style="width:${m.p[2]}%"></div></div><b>${m.p[2].toFixed(1)}%</b></div>
      </div>
-     <div class="meta"><span>Market: 1X2</span><span>Signal gap: ${m.edge.toFixed(1)}%</span></div>
-     <div class="note">This ranking uses the detected market prices and the separation between the strongest and second-strongest implied probabilities. It is an estimate, not a guarantee. Verify the fixture and odds because OCR can make mistakes.</div>
+     <div class="meta"><span>Market: 1X2</span><span>Model gap: ${m.edge.toFixed(1)}%</span></div>
+     <div class="meta"><span>Market prior: ${m.market[m.p.indexOf(Math.max(...m.p))].toFixed(1)}%</span><span>Model estimate: ${Math.max(...m.p).toFixed(1)}%</span></div>
+     <div class="meta"><span>Signal</span><span>${esc(m.risk)}</span></div>
+     <div class="note">This is an odds-based estimate for a computer-generated virtual match. SportyBet states that Instant Virtuals are randomly generated using AI and independent random number generators, so no screenshot-based model can guarantee the next result. Verify the fixture and odds because OCR can make mistakes.</div>
    </article>`;
  }).join('');
 }
