@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GoalMind AI — Dashboard</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header class="nav"><div class="brand">⚽ <span>GoalMind <b>AI</b></span></div><nav><span id="userLabel"></span><button class="btn ghost" onclick="logout()">Log out</button></nav></header>
+<main class="dash">
+<section class="dash-top"><div><div class="pill">DASHBOARD</div><h1>Virtual Football Analyzer</h1><p>Upload a screenshot and generate a probability-based analysis.</p></div><div class="stat"><small>Predictions</small><strong id="count">0</strong></div></section>
+<section class="dashgrid">
+<div class="panel">
+<h2>1. Upload match screenshot</h2>
+<label class="drop" id="drop"><input id="imageInput" type="file" accept="image/*"><span>📷</span><b>Choose a screenshot</b><small>PNG, JPG or WEBP</small></label>
+<img id="preview" class="preview hidden" alt="Screenshot preview">
+<div class="fields"><label>Home odds <input id="homeOdds" type="number" step="0.01" value="1.80"></label><label>Draw odds <input id="drawOdds" type="number" step="0.01" value="3.60"></label><label>Away odds <input id="awayOdds" type="number" step="0.01" value="4.20"></label></div>
+<button class="btn wide" onclick="analyze()">Generate prediction</button>
+<p class="muted">Demo note: screenshot OCR is represented by the uploaded image preview; odds are entered manually for this first version.</p>
+</div>
+<div class="panel result" id="result"><div class="empty"><span>🧠</span><h2>Your analysis appears here</h2><p>Enter the visible odds and generate a prediction.</p></div></div>
+</section>
+<section class="panel history"><h2>Prediction history</h2><div id="history"><p class="muted">No predictions yet.</p></div></section>
+</main>
+<footer>GoalMind AI · Estimates only. Never treat a prediction as guaranteed.</footer>
+<script src="app.js"></script></body></html>
