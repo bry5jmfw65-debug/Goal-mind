@@ -50,6 +50,13 @@ input[type=file]{display:none}.pick{display:inline-block;background:#1683ff;colo
     <div class="stat"><span class="muted">Average confidence</span><b id="avg">—</b></div>
   </div>
 
+  <div id="marketSummary" class="summary hidden">
+    <div class="stat"><span class="muted">Markets detected</span><b id="marketCount">0</b></div>
+    <div class="stat"><span class="muted">Best market</span><b id="bestMarket">—</b></div>
+    <div class="stat"><span class="muted">Best signal</span><b id="bestSignal">—</b></div>
+  </div>
+  <div id="marketCards" class="cards"></div>
+
   <div class="section-title">
     <h2>Prediction cards</h2>
     <div class="controls" style="margin:0">
@@ -75,7 +82,7 @@ fileEl.addEventListener('change',e=>{
   analyzeBtn.classList.remove('hidden'); clearBtn.classList.remove('hidden');
   statusEl.textContent=`Ready: ${currentFile.name}`;
 });
-clearBtn.onclick=()=>{fileEl.value='';currentFile=null;preview.style.display='none';analyzeBtn.classList.add('hidden');clearBtn.classList.add('hidden');progress.style.display='none';cards.innerHTML='<div class="empty">Upload a screenshot to generate prediction cards.</div>';document.getElementById('summary').style.display='none';statusEl.textContent='No screenshot selected.'};
+clearBtn.onclick=()=>{fileEl.value='';currentFile=null;preview.style.display='none';analyzeBtn.classList.add('hidden');clearBtn.classList.add('hidden');progress.style.display='none';cards.innerHTML='<div class="empty">Upload a screenshot to generate prediction cards.</div>';document.getElementById('summary').style.display='none';document.getElementById('marketSummary').classList.add('hidden');document.getElementById('marketCards').innerHTML='';statusEl.textContent='No screenshot selected.'};
 
 analyzeBtn.onclick=async()=>{
  if(!currentFile)return;
@@ -89,6 +96,7 @@ analyzeBtn.onclick=async()=>{
    const lines=buildLines(result.data);
    const matches=detectMatches(lines,result.data);
    render(matches);
+   renderMarketSignals(lines);
    statusEl.textContent=`Finished. Detected ${matches.length} match${matches.length===1?'':'es'}.`;
  }catch(err){console.error(err);statusEl.textContent='Could not analyze this screenshot. Try a clearer image.';cards.innerHTML='<div class="empty">OCR failed. Please try a sharper screenshot.</div>'}
  analyzeBtn.disabled=false;
@@ -243,6 +251,58 @@ function drawCards(){
    </article>`;
  }).join('');
 }
+function detectMarketSignals(text){
+  const t=text.replace(/\s+/g,' ').trim();
+  const results=[];
+  const odds=(t.match(/\b\d{1,2}\.\d{2}\b/g)||[]).map(Number).filter(x=>x>=1.01&&x<=99);
+  if(/\bGG\s*\/?\s*NG\b/i.test(t) || /\bYes\b.*\bNo\b/i.test(t)){
+    const pair=odds.slice(-2);
+    if(pair.length===2) results.push(marketPrediction('GG/NG',['GG','NG'],pair));
+  }
+  if(/\bDouble Chance\b/i.test(t)){
+    const pair=odds.slice(-3);
+    if(pair.length===3) results.push(marketPrediction('Double Chance',['1X','X2','12'],pair));
+  }
+  if(/\bOver\s*\/?\s*Under\b/i.test(t) || /\bO\/U\b/i.test(t)){
+    const pair=odds.slice(-2);
+    if(pair.length===2) results.push(marketPrediction('Over/Under',['Over','Under'],pair));
+  }
+  return results;
+}
+function marketPrediction(market,labels,odds){
+  const inv=odds.map(x=>1/x), sum=inv.reduce((a,b)=>a+b,0);
+  const p=inv.map(x=>x/sum*100), idx=p.indexOf(Math.max(...p));
+  const sorted=[...p].sort((a,b)=>b-a);
+  const edge=sorted[0]-sorted[1];
+  const confidence=Math.min(94,Math.max(50,Math.round(55+edge*.65)));
+  return {market,labels,odds,p,choice:labels[idx],confidence,edge};
+}
+function renderMarketSignals(lines){
+  const text=lines.map(x=>x.text).join(' | ');
+  const markets=detectMarketSignals(text);
+  const box=document.getElementById('marketCards');
+  const summary=document.getElementById('marketSummary');
+  if(!markets.length){summary.classList.add('hidden');box.innerHTML='';return}
+  summary.classList.remove('hidden');
+  document.getElementById('marketCount').textContent=markets.length;
+  const best=[...markets].sort((a,b)=>b.confidence-a.confidence)[0];
+  document.getElementById('bestMarket').textContent=best.market;
+  document.getElementById('bestSignal').textContent=best.choice;
+  box.innerHTML=markets.map(m=>`
+    <article class="card">
+      <div class="match">${esc(m.market)}</div>
+      <div class="odds">Detected odds: ${m.odds.map(x=>x.toFixed(2)).join(' · ')}</div>
+      <div class="pickrow">
+        <div><div class="muted">Strongest selection</div><div class="pickname">${esc(m.choice)}</div></div>
+        <div class="badge">${m.confidence}% signal</div>
+      </div>
+      <div class="bars">${m.p.map((v,i)=>`
+        <div class="line"><span>${esc(m.labels[i])}</span><div class="track"><div class="fill" style="width:${v}%"></div></div><b>${v.toFixed(1)}%</b></div>`).join('')}</div>
+      <div class="meta"><span>Signal gap: ${m.edge.toFixed(1)}%</span><span>Market-based</span></div>
+      <div class="note">This is an estimate derived from the displayed market prices. It does not guarantee the outcome of a virtual match.</div>
+    </article>`).join('');
+}
+
 function logout(){localStorage.removeItem('goalmind_user');location.href='index.html'}
 </script>
 </body>
