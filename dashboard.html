@@ -2,308 +2,451 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GoalMind AI — Full Screenshot Analyzer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GoalMind AI — Screenshot Intelligence v11</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#07111f;color:#eef5ff}
-.wrap{max-width:1100px;margin:auto;padding:22px 16px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
-.brand{font-weight:800;font-size:22px}.brand span{font-size:25px}.logout{border:1px solid #263b56;background:#0d1b2d;color:#dce9f8;border-radius:10px;padding:9px 13px;cursor:pointer}
-.hero{background:linear-gradient(145deg,#0d2138,#0a1728);border:1px solid #203750;border-radius:18px;padding:22px;margin-bottom:18px}
-h1{margin:0 0 8px;font-size:27px}.muted{color:#9fb2c8}.upload{margin-top:18px;border:1.5px dashed #3a638b;border-radius:16px;padding:25px;text-align:center;background:#09192a}
-input[type=file]{display:none}.pick{display:inline-block;background:#1683ff;color:#fff;font-weight:700;padding:12px 17px;border-radius:11px;cursor:pointer}.status{margin-top:12px;font-size:14px;color:#9fb2c8}
-.preview{display:none;width:100%;max-height:430px;object-fit:contain;border-radius:12px;margin-top:18px;background:#050c15}
-.progress{display:none;height:8px;background:#122238;border-radius:99px;overflow:hidden;margin-top:14px}.bar{height:100%;width:0;background:#3da2ff;transition:.2s}
-.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}.btn{border:0;border-radius:10px;padding:11px 15px;font-weight:700;cursor:pointer}.primary{background:#16a36b;color:white}.secondary{background:#182b43;color:#dceaff}.hidden{display:none!important}
-.summary{display:none;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.stat{background:#0d1b2d;border:1px solid #203750;border-radius:13px;padding:14px}.stat b{display:block;font-size:22px;margin-top:3px}
-.section-title{display:flex;justify-content:space-between;align-items:center;margin:22px 0 10px}.section-title h2{font-size:19px;margin:0}
-.cards{display:grid;gap:13px}.card{background:#0c1a2b;border:1px solid #203750;border-radius:15px;padding:16px}.card.top{border-color:#2f9b72}
-.match{font-size:18px;font-weight:800}.odds{font-size:12px;color:#8fa5bc;margin-top:5px}.pickrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:15px 0}.pickname{font-size:20px;font-weight:800}.badge{padding:7px 10px;border-radius:999px;background:#123d31;color:#72e0ae;font-size:12px;font-weight:800}
-.bars{display:grid;gap:8px}.line{display:grid;grid-template-columns:58px 1fr 48px;align-items:center;gap:8px;font-size:12px}.track{height:9px;background:#172b42;border-radius:99px;overflow:hidden}.fill{height:100%;background:#3da2ff;border-radius:99px}
-.meta{display:flex;justify-content:space-between;margin-top:12px;color:#9fb2c8;font-size:13px}.note{font-size:12px;color:#8196ad;margin-top:13px;line-height:1.5}
-.empty{padding:30px;text-align:center;border:1px dashed #29435f;border-radius:14px;color:#8fa5bc}
-@media(max-width:650px){.summary{grid-template-columns:1fr 1fr}.summary .stat:last-child{grid-column:1/-1}.wrap{padding:15px 12px 45px}h1{font-size:23px}.pickrow{align-items:flex-start;flex-direction:column}.top{align-items:flex-start}}
+:root{--bg:#08111f;--card:#101c2d;--muted:#8ea0b8;--text:#f4f7fb;--line:#20324a;--accent:#38d39f;--warn:#ffcc66}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#07101d,#0b1626);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:1100px;margin:auto;padding:22px}.hero{padding:22px 0}.hero h1{margin:0 0 7px;font-size:30px}.hero p{margin:0;color:var(--muted)}
+.card{background:rgba(16,28,45,.96);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 12px 35px rgba(0,0,0,.18)}
+.upload{border:1.5px dashed #36506e;padding:25px;text-align:center;border-radius:16px}
+input[type=file]{width:100%;max-width:520px}
+button{border:0;border-radius:12px;padding:12px 16px;background:var(--accent);color:#06151a;font-weight:800;cursor:pointer;margin:7px 5px 0 0}
+button.secondary{background:#20324a;color:#fff}button:disabled{opacity:.45;cursor:not-allowed}
+#preview{max-width:100%;max-height:420px;display:none;margin:16px auto 0;border-radius:12px}
+.progress{height:9px;background:#17273b;border-radius:20px;overflow:hidden;margin-top:12px}.bar{height:100%;width:0;background:var(--accent);transition:width .2s}
+.status{color:var(--muted);font-size:14px;margin-top:8px}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.stat{background:#0c1727;border:1px solid var(--line);border-radius:13px;padding:14px}.stat b{font-size:23px;display:block}.stat span{color:var(--muted);font-size:12px}
+.filters button{background:#17283e;color:#dbe7f4}.filters button.active{background:var(--accent);color:#06151a}
+.match{border:1px solid var(--line);border-radius:16px;padding:15px;margin:12px 0;background:#0d1929}
+.matchhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.teams{font-weight:800;font-size:17px}.small{color:var(--muted);font-size:12px}.pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#172a40;color:#b9c9db;font-size:11px;margin:4px 4px 0 0}.pill.good{background:#123c31;color:#7ff0c4}.pill.warn{background:#3b3119;color:#ffd980}
+.odds{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.odd{background:#142238;border-radius:11px;padding:10px;text-align:center}.odd b{display:block;font-size:17px}.odd span{font-size:11px;color:var(--muted)}
+.marketgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;margin-top:12px}.market{background:#0a1524;border:1px solid #1c2d43;border-radius:12px;padding:11px}.market h4{margin:0 0 8px;font-size:13px}.pick{font-weight:800}.confidence{margin-top:5px;color:var(--muted);font-size:11px}
+details{margin-top:10px}summary{cursor:pointer;color:#bcd0e6}
+.note{font-size:12px;color:var(--muted);line-height:1.5}.danger{color:#ffd980}
+.hidden{display:none!important}
+.verify{background:#3b2815;color:#ffd88a!important}
+.detected{background:#163149;color:#b9dcff!important}
+.marketrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.scoreline{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted);margin-top:6px}
+.confbar{height:5px;background:#17273b;border-radius:9px;overflow:hidden;margin-top:4px}
+.confbar>i{display:block;height:100%;background:var(--accent)}
+
+@media(max-width:600px){.wrap{padding:13px}.hero h1{font-size:25px}.matchhead{flex-direction:column}.odds{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><div class="brand"><span>⚽</span> GoalMind AI</div><button class="logout" onclick="logout()">Log out</button></div>
   <section class="hero">
-    <h1>SportyBet Virtual Analyzer</h1>
-    <div class="muted">Upload a SportyBet Instant Virtuals screenshot. GoalMind scans the whole image, detects fixtures and 1X2 odds, then creates a separate analysis card for each match.</div>
+    <h1>GoalMind AI</h1>
+    <p>v11 · Screenshot Intelligence</p>
+  </section>
+
+  <section class="card">
     <div class="upload">
-      <label class="pick" for="file">📸 Upload screenshot</label>
+      <h3>Upload a SportyBet screenshot</h3>
+      <p class="note">No manual odds entry. The analyzer reads the screenshot, detects fixtures, market headers and nearby odds, then associates markets using their screen position.</p>
       <input id="file" type="file" accept="image/*">
-      <div id="status" class="status">No screenshot selected.</div>
-      <div id="progress" class="progress"><div id="bar" class="bar"></div></div>
-      <img id="preview" class="preview" alt="Screenshot preview">
-      <div class="controls">
-        <button id="analyze" class="btn primary hidden">Analyze entire screenshot</button>
-        <button id="clear" class="btn secondary hidden">Clear</button>
+      <img id="preview" alt="Screenshot preview">
+      <div>
+        <button id="analyze" disabled>Analyze screenshot</button>
+        <button id="clear" class="secondary">Clear</button>
       </div>
+      <div class="progress"><div id="bar" class="bar"></div></div>
+      <div id="status" class="status">Waiting for screenshot…</div>
     </div>
   </section>
 
-  <div id="summary" class="summary">
-    <div class="stat"><span class="muted">Matches detected</span><b id="count">0</b></div>
-    <div class="stat"><span class="muted">Top pick</span><b id="topPick">—</b></div>
-    <div class="stat"><span class="muted">Average confidence</span><b id="avg">—</b></div>
-  </div>
+  <section id="results" class="hidden">
+    <section class="card">
+      <div class="summary">
+        <div class="stat"><b id="matchCount">0</b><span>fixtures detected</span></div>
+        <div class="stat"><b id="marketCount">0</b><span>market groups</span></div>
+        <div class="stat"><b id="highCount">0</b><span>strong signals</span></div>
+        <div class="stat"><b id="ocrCount">0%</b><span>OCR quality</span></div>
+      </div>
+      <div class="filters">
+        <button class="active" data-filter="all">All</button>
+        <button data-filter="strong">Strong signals</button>
+        <button data-filter="markets">Multi-market</button>
+      </div>
+    </section>
 
-  <div id="marketSummary" class="summary hidden">
-    <div class="stat"><span class="muted">Markets detected</span><b id="marketCount">0</b></div>
-    <div class="stat"><span class="muted">Best market</span><b id="bestMarket">—</b></div>
-    <div class="stat"><span class="muted">Best signal</span><b id="bestSignal">—</b></div>
-  </div>
-  <div id="marketCards" class="cards"></div>
+    <section class="card">
+      <h3>Prediction cards</h3>
+      <div id="cards"></div>
+    </section>
 
-  <div class="section-title">
-    <h2>Prediction cards</h2>
-    <div class="controls" style="margin:0">
-      <button class="btn secondary" onclick="setFilter('all')">All</button>
-      <button class="btn secondary" onclick="setFilter('high')">High confidence</button>
-      <button class="btn secondary" onclick="setFilter('top')">Top picks</button>
-    </div>
-  </div>
-  <div id="cards" class="cards"><div class="empty">Upload a screenshot to generate prediction cards.</div></div>
-  <div class="note">⚠️ Probabilities are estimates. The experimental model layer combines the detected market prior with a transparent heuristic signal; it does not use live team statistics. Verify fixtures and odds before acting.</div>
+    <section class="card">
+      <details>
+        <summary>OCR / detection diagnostics</summary>
+        <pre id="diag" style="white-space:pre-wrap;color:#9fb2c9;font-size:11px"></pre>
+      </details>
+      <p class="note danger">Important: these are market-derived estimates, not guaranteed predictions. SportyBet states that Instant Virtuals are computer-generated and use AI plus independent random number generators, so past-looking team names should not be treated like live real-world form data.</p>
+    </section>
+  </section>
 </div>
 
 <script>
-const fileEl=document.getElementById('file'), preview=document.getElementById('preview');
-const statusEl=document.getElementById('status'), analyzeBtn=document.getElementById('analyze');
-const clearBtn=document.getElementById('clear'), cards=document.getElementById('cards');
-const progress=document.getElementById('progress'), bar=document.getElementById('bar');
-let currentFile=null, allMatches=[], activeFilter='all';
+const $=id=>document.getElementById(id);
+let file=null, lastData=null, currentFilter='all';
 
-fileEl.addEventListener('change',e=>{
-  currentFile=e.target.files?.[0]; if(!currentFile)return;
-  preview.src=URL.createObjectURL(currentFile); preview.style.display='block';
-  analyzeBtn.classList.remove('hidden'); clearBtn.classList.remove('hidden');
-  statusEl.textContent=`Ready: ${currentFile.name}`;
+$("file").addEventListener("change",e=>{
+  file=e.target.files?.[0]||null;
+  $("analyze").disabled=!file;
+  if(file){$("preview").src=URL.createObjectURL(file);$("preview").style.display="block";$("status").textContent="Screenshot ready."}
 });
-clearBtn.onclick=()=>{fileEl.value='';currentFile=null;preview.style.display='none';analyzeBtn.classList.add('hidden');clearBtn.classList.add('hidden');progress.style.display='none';cards.innerHTML='<div class="empty">Upload a screenshot to generate prediction cards.</div>';document.getElementById('summary').style.display='none';document.getElementById('marketSummary').classList.add('hidden');document.getElementById('marketCards').innerHTML='';statusEl.textContent='No screenshot selected.'};
-
-analyzeBtn.onclick=async()=>{
- if(!currentFile)return;
- analyzeBtn.disabled=true; progress.style.display='block'; bar.style.width='3%';
- statusEl.textContent='Reading the entire screenshot…';
- try{
-   const result=await Tesseract.recognize(currentFile,'eng',{
-     logger:m=>{if(m.status==='recognizing text'){bar.style.width=Math.max(5,Math.round((m.progress||0)*100))+'%';statusEl.textContent=`Reading screenshot… ${Math.round((m.progress||0)*100)}%`;}}
-   });
-   bar.style.width='100%';
-   const lines=buildLines(result.data);
-   const matches=detectMatches(lines,result.data);
-   render(matches);
-   renderMarketSignals(lines);
-   statusEl.textContent=`Finished. Detected ${matches.length} match${matches.length===1?'':'es'}.`;
- }catch(err){console.error(err);statusEl.textContent='Could not analyze this screenshot. Try a clearer image.';cards.innerHTML='<div class="empty">OCR failed. Please try a sharper screenshot.</div>'}
- analyzeBtn.disabled=false;
+$("clear").onclick=()=>{
+  file=null;$("file").value="";$("preview").style.display="none";$("results").classList.add("hidden");
+  $("status").textContent="Waiting for screenshot…";$("bar").style.width="0%";
 };
+document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("[data-filter]").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");currentFilter=b.dataset.filter;render();
+});
+$("analyze").onclick=analyze;
 
-function buildLines(data){
- const words=(data.words||[]).filter(w=>w.text&&w.text.trim()&&Number(w.confidence||0)>=15);
- const groups=[];
- for(const w of words){
-   const y=w.bbox?.y0??0, cy=w.bbox?.y1??y;
-   let g=groups.find(x=>Math.abs(x.y-cy)<Math.max(12,(w.bbox?.y1-w.bbox?.y0||20)*0.55));
-   if(!g){g={y:cy,words:[]};groups.push(g)}
-   g.words.push(w);
- }
- return groups.sort((a,b)=>a.y-b.y).map(g=>({text:g.words.sort((a,b)=>(a.bbox?.x0||0)-(b.bbox?.x0||0)).map(w=>w.text).join(' '),words:g.words}));
+function progress(v,msg){$("bar").style.width=v+"%";$("status").textContent=msg}
+
+async function analyze(){
+  if(!file)return;
+  $("analyze").disabled=true;$("results").classList.add("hidden");
+  try{
+    progress(5,"Preparing OCR…");
+    const {data}=await Tesseract.recognize(file,"eng",{
+      logger:m=>{
+        if(m.status==="recognizing text")progress(10+Math.round((m.progress||0)*55),"Reading screenshot…");
+      }
+    });
+    progress(70,"Mapping fixtures and market regions…");
+    lastData=buildModel(data);
+    progress(95,"Building prediction cards…");
+    render();
+    $("results").classList.remove("hidden");
+    progress(100,`Done — ${lastData.matches.length} fixture(s) detected.`);
+  }catch(err){
+    console.error(err);$("status").textContent="Analysis failed: "+err.message;
+  }finally{$("analyze").disabled=false}
 }
 
-function oddsFromText(text){
- const nums=(text.replace(/,/g,'.').match(/\b\d{1,2}[.]\d{2}\b/g)||[]).map(Number);
- return nums.filter(n=>n>=1.01&&n<=99);
+function norm(s){return (s||"").replace(/[|]/g,"I").replace(/\s+/g," ").trim()}
+function num(s){const x=parseFloat(String(s).replace(",","."));return Number.isFinite(x)?x:null}
+function cleanToken(s){return norm(s).replace(/[^A-Za-z0-9À-ÿ&'().:+\-]/g,"")}
+function isOddToken(s){return /^(\d{1,2})([.,]\d{1,2})?$/.test(String(s).trim()) && num(s)>=1.01 && num(s)<=100}
+function isHeader(s){
+  const t=norm(s).toLowerCase().replace(/\s+/g," ");
+  return /(1\s*x\s*2|1x2|over\s*\/?\s*under|o\s*\/?\s*u|double\s*chance|gg\s*\/?\s*ng|handicap|both teams|first goal|last goal|half)/i.test(t);
 }
-function normalizeName(s){
- return s.replace(/[^A-Za-z0-9À-ÿ .&'-]/g,' ').replace(/\s+/g,' ').trim();
+function marketType(s){
+  const t=norm(s).toLowerCase();
+  if(/double\s*chance/.test(t))return"Double Chance";
+  if(/over\s*\/?\s*under|(^|\s)o\s*\/?\s*u(\s|$)/.test(t))return"Over/Under";
+  if(/gg\s*\/?\s*ng|yes\s*no/.test(t))return"GG/NG";
+  if(/handicap/.test(t))return"Handicap";
+  if(/1\s*x\s*2|1x2/.test(t))return"1X2";
+  if(/first\s*goal/.test(t))return"First Goal";
+  if(/last\s*goal/.test(t))return"Last Goal";
+  return null;
 }
-function looksLikeTeam(s){
- s=normalizeName(s);
- if(!s||s.length<2||s.length>28)return false;
- if(/\b(1x2|football|instant|sportybet|home|draw|away|odds|market|live|cashout)\b/i.test(s))return false;
- return /[A-Za-z]{2,}/.test(s);
+function fixtureText(s){
+  let t=norm(s).replace(/\b1x2\b/ig," ").replace(/\b\d{1,2}[.,]\d{1,2}\b/g," ");
+  return t.replace(/\s+/g," ").trim();
 }
-function detectMatches(lines,data){
- const out=[]; const used=new Set();
- // First pass: rows containing 3 odds. This is the most reliable structure for betting slips.
- for(let i=0;i<lines.length;i++){
-   const odds=oddsFromText(lines[i].text);
-   if(odds.length<3)continue;
-   const triple=odds.slice(0,3);
-   let name='';
-   // Look on the same line and nearby lines for a vs/v separator.
-   const candidates=[];
-   for(let j=Math.max(0,i-2);j<=Math.min(lines.length-1,i+2);j++){
-     const t=lines[j].text;
-     if(/\b(vs?|versus)\b/i.test(t)){
-       const parts=t.split(/\b(?:vs?|versus)\b/i);
-       if(parts.length>=2){
-         const a=normalizeName(parts[0]), b=normalizeName(parts[1]);
-         if(looksLikeTeam(a)&&looksLikeTeam(b)) name=`${a} vs ${b}`;
-       }
-     }
-     candidates.push(t);
-   }
-   if(!name){
-     // Find short text labels immediately before the odds row.
-     const prev=lines.slice(Math.max(0,i-2),i).map(x=>normalizeName(x.text)).filter(looksLikeTeam);
-     if(prev.length>=2) name=prev.slice(-2).join(' vs ');
-     else if(prev.length===1) name=prev[0];
-   }
-   const key=`${triple.join('|')}-${name}`;
-   if(used.has(key))continue; used.add(key);
-   out.push(makePrediction(name||`Detected match ${out.length+1}`,triple));
- }
- // Fallback: collect all odds triples if row grouping was poor.
- if(out.length===0){
-   const all=[];
-   (data.words||[]).forEach(w=>{const m=w.text?.match(/^\d{1,2}[.]\d{2}$/);if(m)all.push(Number(m[0]))});
-   for(let i=0;i+2<all.length;i+=3) out.push(makePrediction(`Detected match ${out.length+1}`,all.slice(i,i+3)));
- }
- return out;
-}
-function hashText(s){
- let h=2166136261;
- for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
- return (h>>>0)/4294967295;
-}
-function makePrediction(name,odds){
- // Market prior: normalized inverse odds.
- const inv=odds.map(x=>1/x), sum=inv.reduce((a,b)=>a+b,0), market=inv.map(x=>x/sum*100);
- // Experimental heuristic: a small, bounded deterministic perturbation based only on
- // the detected fixture text. This is deliberately small so the market remains the prior.
- // It is NOT a substitute for live team/form data.
- const seed=hashText(name.toLowerCase());
- const tilt=[(seed-.5)*2,(hashText(name+'draw')-.5)*0.8,(hashText(name+'away')-.5)*2];
- let raw=market.map((v,i)=>Math.max(1,v+tilt[i]*3));
- const rsum=raw.reduce((a,b)=>a+b,0);
- const p=raw.map(v=>v/rsum*100);
- const max=Math.max(...p), idx=p.indexOf(max);
- const labels=['Home Win','Draw','Away Win'];
- const sorted=[...p].sort((a,b)=>b-a);
- const edge=sorted[0]-sorted[1];
- const confidence=Math.min(94,Math.max(50,Math.round(55+edge*0.65)));
- const risk=edge<5?'No clear edge':edge<10?'Close market':'Stronger market signal';
- return {name,odds,p,market,choice:labels[idx],confidence,edge,risk};
-}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function render(matches){
- allMatches=matches||[];
- document.getElementById('summary').style.display=allMatches.length?'grid':'none';
- document.getElementById('count').textContent=allMatches.length;
- if(!allMatches.length){
-   cards.innerHTML='<div class="empty">No complete 1X2 rows were confidently detected. Try a clearer screenshot with the odds visible.</div>';
-   return;
- }
- // Rank by a blend of confidence and probability edge over the runner-up.
- allMatches.forEach(m=>{
-   const sorted=[...m.p].sort((a,b)=>b-a);
-   m.edge=sorted[0]-sorted[1];
-   m.score=Math.round(m.confidence*0.65+m.edge*0.35);
- });
- allMatches.sort((a,b)=>b.score-a.score);
- const top=allMatches[0];
- document.getElementById('topPick').textContent=top.choice;
- document.getElementById('avg').textContent=Math.round(allMatches.reduce((s,m)=>s+m.confidence,0)/allMatches.length)+'%';
- drawCards();
- localStorage.setItem('goalmind_last_analysis',JSON.stringify(allMatches));
-}
-function setFilter(filter){
- activeFilter=filter;
- drawCards();
-}
-function drawCards(){
- let matches=allMatches;
- if(activeFilter==='high') matches=matches.filter(m=>m.confidence>=70);
- if(activeFilter==='top') matches=matches.slice(0,3);
- document.getElementById('filterText').textContent =
-   activeFilter==='all' ? `${matches.length} matches` :
-   activeFilter==='high' ? `${matches.length} high-confidence matches` :
-   `${matches.length} top picks`;
- if(!matches.length){
-   cards.innerHTML='<div class="empty">No matches meet this filter.</div>';
-   return;
- }
- cards.innerHTML=matches.map((m,i)=>{
-   const globalIndex=allMatches.indexOf(m);
-   const quality=m.confidence>=80?'High':m.confidence>=65?'Medium':'Low';
-   return `
-   <article class="card ${globalIndex===0?'top':''}">
-     <div class="match">${esc(m.name)}</div>
-     <div class="odds">Detected 1X2 odds: ${m.odds.map(x=>x.toFixed(2)).join(' · ')}</div>
-     <div class="pickrow">
-       <div><div class="muted">Model pick</div><div class="pickname">${esc(m.choice)}</div></div>
-       <div class="badge">${m.confidence}% ${quality}</div>
-     </div>
-     <div class="bars">
-       <div class="line"><span>Home</span><div class="track"><div class="fill" style="width:${m.p[0]}%"></div></div><b>${m.p[0].toFixed(1)}%</b></div>
-       <div class="line"><span>Draw</span><div class="track"><div class="fill" style="width:${m.p[1]}%"></div></div><b>${m.p[1].toFixed(1)}%</b></div>
-       <div class="line"><span>Away</span><div class="track"><div class="fill" style="width:${m.p[2]}%"></div></div><b>${m.p[2].toFixed(1)}%</b></div>
-     </div>
-     <div class="meta"><span>Market: 1X2</span><span>Model gap: ${m.edge.toFixed(1)}%</span></div>
-     <div class="meta"><span>Market prior: ${m.market[m.p.indexOf(Math.max(...m.p))].toFixed(1)}%</span><span>Model estimate: ${Math.max(...m.p).toFixed(1)}%</span></div>
-     <div class="meta"><span>Signal</span><span>${esc(m.risk)}</span></div>
-     <div class="note">This is an odds-based estimate for a computer-generated virtual match. SportyBet states that Instant Virtuals are randomly generated using AI and independent random number generators, so no screenshot-based model can guarantee the next result. Verify the fixture and odds because OCR can make mistakes.</div>
-   </article>`;
- }).join('');
-}
-function detectMarketSignals(text){
-  const t=text.replace(/\s+/g,' ').trim();
-  const results=[];
-  const odds=(t.match(/\b\d{1,2}\.\d{2}\b/g)||[]).map(Number).filter(x=>x>=1.01&&x<=99);
-  if(/\bGG\s*\/?\s*NG\b/i.test(t) || /\bYes\b.*\bNo\b/i.test(t)){
-    const pair=odds.slice(-2);
-    if(pair.length===2) results.push(marketPrediction('GG/NG',['GG','NG'],pair));
+
+function buildLines(words){
+  const usable=(words||[]).filter(w=>norm(w.text));
+  usable.sort((a,b)=>a.bbox.y0-b.bbox.y0||a.bbox.x0-b.bbox.x0);
+  const lines=[];
+  for(const w of usable){
+    const cy=(w.bbox.y0+w.bbox.y1)/2;
+    let line=lines.find(l=>Math.abs(l.cy-cy)<=Math.max(9,(w.bbox.y1-w.bbox.y0)*.65));
+    if(!line){line={cy,words:[]};lines.push(line)}
+    line.words.push(w);
+    line.cy=line.words.reduce((a,z)=>a+(z.bbox.y0+z.bbox.y1)/2,0)/line.words.length;
   }
-  if(/\bDouble Chance\b/i.test(t)){
-    const pair=odds.slice(-3);
-    if(pair.length===3) results.push(marketPrediction('Double Chance',['1X','X2','12'],pair));
-  }
-  if(/\bOver\s*\/?\s*Under\b/i.test(t) || /\bO\/U\b/i.test(t)){
-    const pair=odds.slice(-2);
-    if(pair.length===2) results.push(marketPrediction('Over/Under',['Over','Under'],pair));
-  }
-  return results;
+  return lines.map(l=>{
+    l.words.sort((a,b)=>a.bbox.x0-b.bbox.x0);
+    return {y:l.cy,words:l.words,text:norm(l.words.map(w=>w.text).join(" ")),
+      nums:l.words.filter(w=>isOddToken(w.text)).map(w=>({v:num(w.text),x:(w.bbox.x0+w.bbox.x1)/2,conf:w.confidence||0}))};
+  }).sort((a,b)=>a.y-b.y);
 }
-function marketPrediction(market,labels,odds){
-  const inv=odds.map(x=>1/x), sum=inv.reduce((a,b)=>a+b,0);
-  const p=inv.map(x=>x/sum*100), idx=p.indexOf(Math.max(...p));
-  const sorted=[...p].sort((a,b)=>b-a);
-  const edge=sorted[0]-sorted[1];
-  const confidence=Math.min(94,Math.max(50,Math.round(55+edge*.65)));
-  return {market,labels,odds,p,choice:labels[idx],confidence,edge};
+
+
+function rowNums(line){
+  return line.nums.filter(x=>x.v>=1.01&&x.v<=100);
 }
-function renderMarketSignals(lines){
-  const text=lines.map(x=>x.text).join(' | ');
-  const markets=detectMarketSignals(text);
-  const box=document.getElementById('marketCards');
-  const summary=document.getElementById('marketSummary');
-  if(!markets.length){summary.classList.add('hidden');box.innerHTML='';return}
-  summary.classList.remove('hidden');
-  document.getElementById('marketCount').textContent=markets.length;
-  const best=[...markets].sort((a,b)=>b.confidence-a.confidence)[0];
-  document.getElementById('bestMarket').textContent=best.market;
-  document.getElementById('bestSignal').textContent=best.choice;
-  box.innerHTML=markets.map(m=>`
-    <article class="card">
-      <div class="match">${esc(m.market)}</div>
-      <div class="odds">Detected odds: ${m.odds.map(x=>x.toFixed(2)).join(' · ')}</div>
-      <div class="pickrow">
-        <div><div class="muted">Strongest selection</div><div class="pickname">${esc(m.choice)}</div></div>
-        <div class="badge">${m.confidence}% signal</div>
+function textWithoutOdds(line){
+  return norm(line.words.map(w=>w.text).filter(t=>!isOddToken(t)).join(" "));
+}
+function looksLikeFixtureText(t){
+  const x=norm(t).toLowerCase();
+  if(!x || isHeader(x)) return false;
+  if(/^(home|away|draw|yes|no|over|under|gg|ng|1x|x2|12)$/.test(x)) return false;
+  return /[a-z]{2,}/i.test(x) && x.length>=4;
+}
+function detectFixtures(lines){
+  const out=[];
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i], t=l.text;
+    if(isHeader(t)) continue;
+    const nums=rowNums(l);
+    let teams=null;
+    const vs=t.match(/(.+?)\s+(?:vs|v|versus)\s+(.+?)(?=\s+\d|$)/i);
+    if(vs) teams=`${fixtureText(vs[1])} vs ${fixtureText(vs[2])}`;
+    else {
+      const cleaned=textWithoutOdds(l);
+      if(looksLikeFixtureText(cleaned)) teams=fixtureText(cleaned);
+    }
+    if(teams && nums.length>=3){
+      out.push({
+        id:out.length,teams,y:l.y,line:i,
+        odds:nums.slice(-3).map(x=>x.v),
+        xMin:Math.min(...nums.slice(-3).map(x=>x.x)),
+        xMax:Math.max(...nums.slice(-3).map(x=>x.x)),
+        conf:Math.round(Math.min(...nums.slice(-3).map(x=>x.conf||0)))
+      });
+    }
+  }
+  // Remove duplicate OCR rows while preserving the strongest-confidence copy.
+  const ded=[];
+  for(const m of out){
+    const same=ded.find(x=>Math.abs(x.y-m.y)<13);
+    if(!same) ded.push(m);
+    else if(m.conf>same.conf) Object.assign(same,m);
+  }
+  return ded.slice(0,40);
+}
+
+function detectMarketGroups(lines){
+  const groups=[];
+  lines.forEach((l,i)=>{
+    const mt=marketType(l.text);
+    if(mt) groups.push({
+      type:mt,y:l.y,line:i,
+      header:l.text,
+      xCenter:l.words.length ? l.words.reduce((a,w)=>a+(w.bbox.x0+w.bbox.x1)/2,0)/l.words.length : 0
+    });
+  });
+  return groups;
+}
+
+function nearbyMarketRows(lines, group){
+  const rows=[];
+  // Search down until another market header appears. This mirrors the visual
+  // structure of SportyBet screens where a market title precedes its options.
+  for(let j=group.line+1;j<Math.min(lines.length,group.line+12);j++){
+    if(isHeader(lines[j].text)) break;
+    if(rowNums(lines[j]).length) rows.push(lines[j]);
+  }
+  return rows;
+}
+
+function marketNeeds(type){
+  if(type==="GG/NG"||type==="Over/Under") return 2;
+  return 3;
+}
+function defaultLabels(type,count){
+  const map={
+    "1X2":["1","X","2"],
+    "Double Chance":["1X","X2","12"],
+    "GG/NG":["GG","NG"],
+    "Over/Under":["Over","Under"],
+    "Handicap":["Home","Away","Draw"],
+    "First Goal":["Home","Away"],
+    "Last Goal":["Home","Away"]
+  };
+  return (map[type]||Array.from({length:count},(_,i)=>`Option ${i+1}`)).slice(0,count);
+}
+
+function associateMarkets(lines,fixtures,groups){
+  const markets=[];
+  for(const g of groups){
+    const rows=nearbyMarketRows(lines,g);
+    const candidates=[];
+    for(const row of rows){
+      const nums=rowNums(row);
+      if(nums.length>=2){
+        candidates.push({row,nums});
+      }
+    }
+    if(!candidates.length) continue;
+
+    // First prefer a market row that explicitly repeats a fixture name.
+    let target=null, bestScore=-Infinity;
+    for(const f of fixtures){
+      const ft=f.teams.toLowerCase().replace(/\s+/g," ");
+      for(const c of candidates){
+        const rt=c.row.text.toLowerCase();
+        let score=0;
+        if(ft.split(/\s+vs\s+/).some(p=>p.length>2 && rt.includes(p.trim()))) score+=80;
+        score += Math.max(0,50-Math.abs(c.row.y-f.y)*0.5);
+        // Horizontal proximity matters when multiple fixture columns are visible.
+        const cx=c.nums.reduce((a,n)=>a+n.x,0)/c.nums.length;
+        const fx=(f.xMin+f.xMax)/2;
+        score += Math.max(0,30-Math.abs(cx-fx)*0.08);
+        if(score>bestScore){bestScore=score;target={f,c,score};}
+      }
+    }
+    if(!target) continue;
+
+    const need=marketNeeds(g.type);
+    const selected=target.c.nums.slice(-Math.max(need,2));
+    if(selected.length<need) continue;
+
+    const confidence=Math.max(0,Math.min(100,Math.round(
+      (target.f.conf*0.45) +
+      ((target.c.row.words.reduce((a,w)=>a+(w.confidence||0),0)/Math.max(1,target.c.row.words.length))*0.25) +
+      Math.min(30,target.score*0.3)
+    )));
+    const ambiguous=target.score<35 || confidence<48;
+
+    markets.push({
+      type:g.type,y:g.y,fixture:target.f,
+      odds:selected.map(x=>x.v),
+      labels:defaultLabels(g.type,selected.length),
+      header:g.header,
+      confidence,ambiguous,
+      sourceLine:target.c.row.text
+    });
+  }
+
+  const unique=[];
+  for(const m of markets){
+    const old=unique.find(x=>x.fixture===m.fixture&&x.type===m.type);
+    if(!old || m.confidence>old.confidence){
+      if(old) Object.assign(old,m); else unique.push(m);
+    }
+  }
+  return unique;
+}
+
+function makeModel(fixtures,markets){
+  return fixtures.map((f,idx)=>{
+    const mks=markets.filter(m=>m.fixture===f && !m.ambiguous);
+    const base=marketSignal(f.odds,["1","X","2"]);
+    const scored=mks.map(m=>{
+      const s=marketSignal(m.odds,m.labels);
+      return {...m,...s};
+    });
+    const options=[{
+      type:"1X2",pick:base.pick,p:base.p,gap:base.gap,odds:f.odds,confidence:f.conf
+    },...scored];
+    const best=options.sort((a,b)=>(b.gap+b.p*.15)-(a.gap+a.p*.15))[0];
+    const confidence=Math.round(Math.min(96,48+best.gap*180+Math.max(0,best.p-.34)*80));
+    const ambiguousCount=markets.filter(m=>m.fixture===f&&m.ambiguous).length;
+    return {
+      id:idx,teams:f.teams,odds:f.odds,conf:confidence,
+      pick:best.pick,bestType:best.type,markets:scored,
+      ambiguousMarkets:ambiguousCount,ocr:f.conf
+    };
+  });
+}
+
+function buildModel(data){
+  const lines=buildLines(data.words||[]);
+  const fixtures=detectFixtures(lines);
+  const groups=detectMarketGroups(lines);
+  const markets=associateMarkets(lines,fixtures,groups);
+  const matches=makeModel(fixtures,markets);
+  const words=(data.words||[]).filter(w=>norm(w.text));
+  const avg=words.reduce((a,w)=>a+(w.confidence||0),0)/Math.max(1,words.length);
+  return {lines,groups,markets,matches,ocr:Math.round(avg)};
+}
+function inverse(odds){
+  const inv=odds.map(o=>1/o);const sum=inv.reduce((a,b)=>a+b,0);
+  return inv.map(x=>x/sum);
+}
+function marketSignal(odds,labels){
+  const p=inverse(odds);let k=0;
+  for(let i=1;i<p.length;i++)if(p[i]>p[k])k=i;
+  const gap=p[k]-(p.slice().sort((a,b)=>b-a)[1]||0);
+  return {pick:labels[k]||`Option ${k+1}`,p:p[k],gap};
+}
+function makeModel(fixtures,markets){
+  return fixtures.map((f,idx)=>{
+    const mks=markets.filter(m=>m.fixture===f);
+    const base=marketSignal(f.odds,["1","X","2"]);
+    const scored=mks.map(m=>{
+      const s=marketSignal(m.odds,m.labels);
+      return {...m,...s};
+    });
+    const best=[{type:"1X2",pick:base.pick,p:base.p,gap:base.gap,odds:f.odds},...scored]
+      .sort((a,b)=>(b.gap+b.p*.15)-(a.gap+a.p*.15))[0];
+    const confidence=Math.round(Math.min(96,48+best.gap*180+Math.max(0,best.p-.34)*80));
+    return {id:idx,teams:f.teams,odds:f.odds,conf:confidence,pick:best.pick,bestType:best.type,markets:scored,ocr:f.conf};
+  });
+}
+
+function buildModel(data){
+  const lines=buildLines(data.words||[]);
+  const fixtures=detectFixtures(lines);
+  const groups=detectMarketGroups(lines);
+  const markets=associateMarkets(lines,fixtures,groups);
+  const matches=makeModel(fixtures,markets);
+  const avg=(data.words||[]).filter(w=>norm(w.text)).reduce((a,w)=>a+(w.confidence||0),0)/Math.max(1,(data.words||[]).filter(w=>norm(w.text)).length);
+  return {lines,groups,markets,matches,ocr:Math.round(avg)};
+}
+
+function render(){
+  // v11 intentionally refuses to silently promote ambiguous market associations.
+
+  const d=lastData||{matches:[],markets:[],ocr:0};
+  $("matchCount").textContent=d.matches.length;
+  $("marketCount").textContent=d.markets.length;
+  $("highCount").textContent=d.matches.filter(x=>x.conf>=70).length;
+  $("ocrCount").textContent=d.ocr+"%";
+  const filtered=d.matches.filter(m=>{
+    if(currentFilter==="strong")return m.conf>=70;
+    if(currentFilter==="markets")return m.markets.length>=2;
+    return true;
+  });
+  $("cards").innerHTML=filtered.length?filtered.map(cardHTML).join(""):`<div class="note">No matches meet this filter.</div>`;
+  $("diag").textContent=JSON.stringify({
+    fixtures:d.matches.map(x=>({teams:x.teams,odds:x.odds,confidence:x.conf,markets:x.markets.map(m=>({type:m.type,odds:m.odds,pick:m.pick,prob:+(m.p*100).toFixed(1),associationConfidence:m.confidence,ambiguous:m.ambiguous,sourceLine:m.sourceLine}))})),
+    marketHeaders:d.groups.map(x=>x.header),
+    ocr:d.ocr
+  },null,2);
+}
+
+function cardHTML(m){
+  const strength=m.conf>=75?"Strong signal":m.conf>=60?"Moderate signal":"Weak / close market";
+  const linked=m.markets.length;
+  const extra=m.ambiguousMarkets?`<span class="pill verify">${m.ambiguousMarkets} market${m.ambiguousMarkets>1?"s":""} needs verification</span>`:"";
+  return `<article class="match">
+    <div class="matchhead">
+      <div>
+        <div class="teams">${esc(m.teams)}</div>
+        <div class="small">1X2 · OCR ${Math.round(m.ocr||0)}% · spatial market matching enabled</div>
       </div>
-      <div class="bars">${m.p.map((v,i)=>`
-        <div class="line"><span>${esc(m.labels[i])}</span><div class="track"><div class="fill" style="width:${v}%"></div></div><b>${v.toFixed(1)}%</b></div>`).join('')}</div>
-      <div class="meta"><span>Signal gap: ${m.edge.toFixed(1)}%</span><span>Market-based</span></div>
-      <div class="note">This is an estimate derived from the displayed market prices. It does not guarantee the outcome of a virtual match.</div>
-    </article>`).join('');
+      <div><span class="pill ${m.conf>=70?"good":m.conf<55?"warn":""}">${strength} · ${m.conf}%</span></div>
+    </div>
+    <div class="odds">${["1","X","2"].map((x,i)=>`<div class="odd"><span>${x}</span><b>${m.odds[i]??"—"}</b></div>`).join("")}</div>
+    <div class="marketgrid">
+      <div class="market">
+        <h4>Top 1X2 pick</h4>
+        <div class="pick">${m.pick}</div>
+        <div class="confidence">${Math.round(inverse(m.odds)[["1","X","2"].indexOf(m.pick)]*100)}% market probability</div>
+        <div class="confbar"><i style="width:${m.conf}%"></i></div>
+      </div>
+      ${m.markets.map(x=>`<div class="market">
+        <h4>${esc(x.type)}</h4>
+        <div class="pick">${esc(x.pick)}</div>
+        <div class="confidence">${Math.round(x.p*100)}% · association ${x.confidence}%</div>
+        <div class="marketrow"><span class="pill detected">Detected</span><span class="pill">${x.odds.join(" / ")}</span></div>
+        <div class="confbar"><i style="width:${x.confidence}%"></i></div>
+      </div>`).join("")}
+    </div>
+    <div class="marketrow">
+      ${linked?`<span class="pill good">${linked} linked market${linked>1?"s":""}</span>`:`<span class="pill">Only 1X2 detected</span>`}
+      ${extra}
+    </div>
+    ${m.markets.length?`<details><summary>How markets were associated</summary>
+      <div class="note">${m.markets.map(x=>`<b>${esc(x.type)}</b> → ${esc(x.sourceLine)} · ${x.confidence}% confidence`).join("<br>")}</div>
+    </details>`:""}
+  </article>`;
 }
-
-function logout(){localStorage.removeItem('goalmind_user');location.href='index.html'}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 </script>
 </body>
 </html>
