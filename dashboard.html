@@ -31,9 +31,12 @@ async function analyze(f){
     scanStage(0,'READING SPORTYBET SCREENSHOT…',15);
     const ocr=await runOCR(img);
     const text=(ocr.fullText||'')+'\n--- ODDS CROP ---\n'+(ocr.oddsText||'');
-    $('ocrText').textContent=text||'No OCR text returned.';
     scanStage(1,'READING ODDS…',82);
     let clean=extractFixtures(ocr.fullText||'',ocr.oddsText||'');
+    if(!clean.length){
+      const retry=extractFixtures(ocr.oddsText||'',ocr.fullText||'');
+      if(retry.length) clean=retry;
+    }
     if(clean.length<1) throw new Error('I could read the screenshot, but I could not reliably match the team names to the 1X2 odds. Use a full-screen SportyBet screenshot with the odds visible.');
     scanStage(2,`ANALYZING ${clean.length} MATCHES…`,93);
     render(clean); scanStage(3,'GENERATING TOP 3 SAFEST PICKS…',98);
