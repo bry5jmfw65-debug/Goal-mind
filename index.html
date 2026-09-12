@@ -1,140 +1,47 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GoalMind AI — Virtual Football Predictions</title>
+<title>GoalMind AI — Smart Screenshot Analyzer</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#07111f;color:#f5f7fb}
-a{color:inherit;text-decoration:none}.wrap{max-width:1100px;margin:auto;padding:0 22px}
-header{height:72px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1d2a3c}
-.logo{font-weight:800;font-size:20px}.nav{display:flex;gap:24px;align-items:center}
-button{border:0;border-radius:10px;padding:12px 18px;font-weight:700;cursor:pointer;font-size:15px}
-.btn{background:#39d98a;color:#06130d}.btn2{background:#172337;color:#fff;border:1px solid #2b3a50}
-.hero{padding:80px 0 55px;display:grid;grid-template-columns:1.1fr .9fr;gap:50px;align-items:center}
-.eyebrow{font-size:13px;font-weight:800;color:#62e3a0;letter-spacing:1.2px}.hero h1{font-size:52px;line-height:1.05;margin:14px 0}.hero p{color:#aeb9c9;font-size:18px;line-height:1.6}
-.actions{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}.notice{font-size:13px;color:#8e9bad;margin-top:18px}
-.card{background:#0d1929;border:1px solid #243349;border-radius:18px;padding:24px;box-shadow:0 20px 60px #0005}
-.live{font-size:11px;color:#62e3a0;font-weight:800}.teams{display:flex;justify-content:space-between;margin:22px 0}.team{text-align:center;font-weight:700}.vs{color:#7e8da2}
-.bar{height:9px;background:#1a293d;border-radius:20px;overflow:hidden;margin:7px 0 15px}.bar span{display:block;height:100%;background:#39d98a}.prob{display:grid;grid-template-columns:1fr auto;gap:4px;color:#b8c2d0;font-size:14px}
-section{padding:55px 0}.section-title{text-align:center;margin-bottom:35px}.section-title h2{font-size:32px;margin:8px 0}.muted{color:#aeb9c9}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.feature{background:#0d1929;border:1px solid #243349;border-radius:15px;padding:24px}.icon{font-size:28px}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.step{padding:22px;border:1px solid #243349;border-radius:15px;background:#0b1625}.num{color:#62e3a0;font-weight:800}
-footer{padding:30px 0;color:#758398;border-top:1px solid #1d2a3c;font-size:13px}
-.modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;padding:20px;z-index:99}.modal.open{display:flex}
-.box{width:min(440px,100%);background:#0d1929;border:1px solid #30415b;border-radius:18px;padding:25px;position:relative}.close{position:absolute;right:12px;top:10px;background:transparent;color:#aeb9c9;font-size:24px;padding:5px}
-label{display:block;margin:13px 0 6px;color:#c8d0dc;font-size:13px}input{width:100%;padding:13px;border-radius:9px;border:1px solid #33445d;background:#07111f;color:#fff;font-size:15px}.form-btn{width:100%;margin-top:18px}.switch{margin-top:16px;text-align:center;color:#9ba8ba;font-size:14px}.switch button{background:none;color:#62e3a0;padding:0}
-@media(max-width:800px){.hero{grid-template-columns:1fr;padding-top:50px}.hero h1{font-size:40px}.grid,.steps{grid-template-columns:1fr}.nav a{display:none}}
+*{box-sizing:border-box}body{margin:0;background:#07111f;color:#f5f7fb;font-family:Inter,Arial,sans-serif}
+.wrap{max-width:1120px;margin:auto;padding:0 20px}header{height:70px;border-bottom:1px solid #1d2a3c;display:flex;align-items:center}
+.head{display:flex;justify-content:space-between;align-items:center;width:100%}.logo{font-size:21px;font-weight:900}.logo span{color:#39d98a}
+.btn{border:0;border-radius:11px;padding:12px 18px;background:#39d98a;color:#06130d;font-weight:800;cursor:pointer}
+.hero{padding:68px 0 45px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}.eyebrow{font-size:12px;letter-spacing:1.4px;color:#62e3a0;font-weight:900}
+h1{font-size:50px;line-height:1.04;margin:14px 0}.hero p{font-size:18px;line-height:1.6;color:#aeb9c9}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:25px}.secondary{background:#172337;color:#fff;border:1px solid #2b3a50}
+.demo{background:#0d1929;border:1px solid #243349;border-radius:20px;padding:24px;box-shadow:0 25px 70px #0006}
+.demo-row{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid #26364b}.odds{display:flex;gap:7px}.odds b{background:#18263a;padding:7px 9px;border-radius:7px;color:#5fe29a}
+section{padding:48px 0}.section-title{text-align:center}.muted{color:#aeb9c9}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}.feature{background:#0d1929;border:1px solid #243349;border-radius:16px;padding:22px}
+footer{padding:28px 0;border-top:1px solid #1d2a3c;color:#758398;font-size:13px}
+.modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal.open{display:flex}.box{width:min(460px,100%);background:#0d1929;border:1px solid #30415b;border-radius:18px;padding:24px}.close{float:right;background:none;color:#aeb9c9;border:0;font-size:25px}
+label{display:block;font-size:13px;color:#cbd4df;margin:14px 0 6px}input{width:100%;padding:13px;border-radius:9px;border:1px solid #33445d;background:#07111f;color:#fff}
+.form-btn{width:100%;margin-top:18px}
+@media(max-width:800px){.hero{grid-template-columns:1fr;padding-top:42px}.hero h1{font-size:39px}.grid{grid-template-columns:1fr}.nav-hide{display:none}}
 </style>
 </head>
 <body>
-<header>
-<div class="wrap" style="width:100%;display:flex;align-items:center;justify-content:space-between">
-<div class="logo">⚽ GoalMind AI</div>
-<nav class="nav"><a href="#how">How it works</a><a href="#features">Features</a><button class="btn2" data-auth="login">Log in</button><button class="btn" data-auth="signup">Get started</button></nav>
-</div>
-</header>
-
+<header><div class="wrap head"><div class="logo">⚽ Goal<span>Mind</span> AI</div><button class="btn" onclick="location.href='dashboard.html'">Open analyzer</button></div></header>
 <main class="wrap">
 <section class="hero">
-<div>
-<div class="eyebrow">AI-ASSISTED VIRTUAL FOOTBALL ANALYSIS</div>
-<h1>Turn your virtual football screenshots into data-driven picks.</h1>
-<p>Upload a screenshot, review the visible match information, and receive transparent probability-based predictions.</p>
-<div class="actions"><button class="btn" data-auth="signup">Start predicting →</button><button class="btn2" id="howBtn">See how it works</button></div>
-<div class="notice">No guaranteed wins. Probabilities are estimates, not certainty.</div>
+<div><div class="eyebrow">SMART MULTI-GAME SCREENSHOT ANALYSIS</div>
+<h1>Read every game in your football screenshot.</h1>
+<p>GoalMind now analyzes the screenshot row-by-row instead of treating the entire image as one block. It detects fixtures, extracts 1X2 odds, validates the results and generates an analysis card for every detected game.</p>
+<div class="actions"><button class="btn" onclick="location.href='dashboard.html'">Analyze a screenshot →</button><button class="btn secondary" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How it works</button></div>
 </div>
-<div class="card">
-<div class="live">● LIVE DEMO</div>
-<div class="teams"><div class="team">Manchester City<br><small>Home</small></div><div class="vs">vs</div><div class="team">Arsenal<br><small>Away</small></div></div>
-<div class="prob">Home win <b>54%</b></div><div class="bar"><span style="width:54%"></span></div>
-<div class="prob">Draw <b>25%</b></div><div class="bar"><span style="width:25%"></span></div>
-<div class="prob">Away win <b>21%</b></div><div class="bar"><span style="width:21%"></span></div>
-<p style="color:#aeb9c9">★ Model lean: <b style="color:#fff">Home or Draw</b></p>
-</div>
+<div class="demo"><div style="color:#62e3a0;font-weight:900;font-size:12px">● DETECTION PREVIEW</div>
+<div class="demo-row"><b>ARS vs COV</b><span class="odds"><b>1.55</b><b>4.46</b><b>5.56</b></span></div>
+<div class="demo-row"><b>BOU vs SUN</b><span class="odds"><b>1.93</b><b>3.64</b><b>3.88</b></span></div>
+<div class="demo-row"><b>LIV vs TOT</b><span class="odds"><b>2.09</b><b>3.82</b><b>3.23</b></span></div>
+<div class="demo-row"><b>EVE vs NFO</b><span class="odds"><b>2.57</b><b>3.80</b><b>2.51</b></span></div>
+<p class="muted">✓ 7/7 fixtures detected in the reference screenshot</p></div>
 </section>
-
-<section id="features">
-<div class="section-title"><h2>Built for practical analysis</h2><p class="muted">Simple, transparent tools for virtual football analysis.</p></div>
-<div class="grid">
-<div class="feature"><div class="icon">📷</div><h3>Screenshot upload</h3><p class="muted">Upload a match screenshot from your virtual football platform.</p></div>
-<div class="feature"><div class="icon">🧠</div><h3>Transparent model</h3><p class="muted">Uses visible odds and a simple probability model rather than guaranteed predictions.</p></div>
-<div class="feature"><div class="icon">📊</div><h3>Prediction history</h3><p class="muted">Keep a record of generated predictions and track results.</p></div>
-</div>
-</section>
-
-<section id="how">
-<div class="section-title"><h2>How it works</h2></div>
-<div class="steps">
-<div class="step"><div class="num">01</div><h3>Create an account</h3><p class="muted">Register locally in this prototype.</p></div>
-<div class="step"><div class="num">02</div><h3>Upload a screenshot</h3><p class="muted">GoalMind scans the full screenshot, separates visible fixture rows, reads the odds automatically, validates each game, and generates a prediction card for every confidently detected match.</p></div>
-<div class="step"><div class="num">03</div><h3>Generate analysis</h3><p class="muted">Receive estimated probabilities and the strongest model lean.</p></div>
-</div>
-</section>
+<section id="how"><div class="section-title"><h2>How the new reader works</h2><p class="muted">Built to reduce missed games and OCR errors.</p></div>
+<div class="grid"><div class="feature"><h3>01 · Find rows</h3><p class="muted">Detects repeated fixture rows and horizontal separators before OCR.</p></div>
+<div class="feature"><h3>02 · Read each row</h3><p class="muted">Each game is enlarged and OCR'd separately so logos, stars and unrelated UI don't overwhelm the text.</p></div>
+<div class="feature"><h3>03 · Validate</h3><p class="muted">Requires two team labels and three plausible 1X2 odds before a game is marked ready.</p></div></div></section>
 </main>
-
-<footer><div class="wrap">© 2026 GoalMind AI · Screenshot analysis is probability-based · Betting involves risk.</div></footer>
-
-<div class="modal" id="authModal">
-<div class="box">
-<button class="close" id="closeAuth">×</button>
-<h2 id="authHeading">Create account</h2>
-<p class="muted">Start using the prediction dashboard.</p>
-<form id="authForm">
-<div id="nameField"><label>Full name</label><input id="fullName" autocomplete="name"></div>
-<label>Email</label><input id="email" type="email" autocomplete="email" required>
-<label>Password</label><input id="password" type="password" autocomplete="current-password" required>
-<button class="btn form-btn" type="submit" id="submitAuth">Continue</button>
-</form>
-<div class="switch"><span id="switchText">Already have an account?</span> <button type="button" id="switchAuth">Log in</button></div>
-</div>
-</div>
-
-<script>
-(function(){
-let mode="signup";
-const modal=document.getElementById("authModal");
-const heading=document.getElementById("authHeading");
-const nameField=document.getElementById("nameField");
-const form=document.getElementById("authForm");
-const switchBtn=document.getElementById("switchAuth");
-const switchText=document.getElementById("switchText");
-const fullName=document.getElementById("fullName");
-const email=document.getElementById("email");
-const password=document.getElementById("password");
-
-function openAuth(nextMode){
- mode=nextMode==="login"?"login":"signup";
- heading.textContent=mode==="login"?"Log in":"Create account";
- nameField.style.display=mode==="login"?"none":"block";
- switchText.textContent=mode==="login"?"Don't have an account?":"Already have an account?";
- switchBtn.textContent=mode==="login"?"Create account":"Log in";
- modal.classList.add("open");
- document.body.style.overflow="hidden";
- setTimeout(()=>{(mode==="login"?email:fullName).focus()},50);
-}
-function closeAuth(){
- modal.classList.remove("open");
- document.body.style.overflow="";
-}
-document.querySelectorAll("[data-auth]").forEach(b=>b.addEventListener("click",()=>openAuth(b.dataset.auth)));
-document.getElementById("closeAuth").addEventListener("click",closeAuth);
-modal.addEventListener("click",e=>{if(e.target===modal)closeAuth()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAuth()});
-switchBtn.addEventListener("click",()=>openAuth(mode==="login"?"signup":"login"));
-document.getElementById("howBtn").addEventListener("click",()=>document.getElementById("how").scrollIntoView({behavior:"smooth"}));
-
-form.addEventListener("submit",function(e){
- e.preventDefault();
- const user={name:fullName.value.trim()||"GoalMind User",email:email.value.trim(),password:password.value};
- if(!user.email||!user.password){alert("Please enter your email and password.");return;}
- if(mode==="signup"&&!user.name){alert("Please enter your full name.");return;}
- localStorage.setItem("goalmind_user",JSON.stringify(user));
- closeAuth();
- alert(mode==="signup"?"Account created successfully.":"Login successful.");
- window.location.href="dashboard.html";
-});
-})();
-</script>
-</body>
-</html>
+<footer><div class="wrap">GoalMind AI · Estimates only. No guaranteed wins.</div></footer>
+</body></html>
