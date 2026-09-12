@@ -9,12 +9,83 @@
 <section id="results" style="display:none"><div class="summary" id="summary"></div><div class="cards" id="cards"></div></section></main><canvas id="cv" style="display:none"></canvas><script>
 const $=id=>document.getElementById(id),file=$('file'),drop=$('drop'),status=$('status'),progress=$('progress'),results=$('results'),cards=$('cards'),summary=$('summary'),cv=$('cv'),historyFile=$('historyFile'),trainStatus=$('trainStatus'),stats=$('stats');
 const KEY='goalmind_v5_history', LOG='goalmind_v5_predictions'; let history=JSON.parse(localStorage.getItem(KEY)||'[]'); let logs=JSON.parse(localStorage.getItem(LOG)||'[]');
-drop.onclick=()=>file.click();file.onchange=()=>file.files[0]&&analyze(file.files[0]);['dragenter','dragover'].forEach(e=>drop.addEventListener(e,x=>{x.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(e=>drop.addEventListener(e,x=>{x.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f?.type.startsWith('image/'))analyze(f)});historyFile.onchange=()=>historyFile.files[0]&&importCSV(historyFile.files[0]);$('demoBtn').onclick=()=>render([{home:'ARS',away:'CHE',odds:[1.85,3.7,4.1]},{home:'LIV',away:'TOT',odds:[2.08,3.75,3.18]},{home:'EVE',away:'NFO',odds:[2.55,3.55,2.58]}]);$('clearHistory').onclick=()=>{if(confirm('Clear imported virtual-match history?')){history=[];localStorage.removeItem(KEY);refreshStats()}};$('exportLog').onclick=exportLogs;refreshStats();
+file.onchange=()=>file.files[0]&&analyze(file.files[0]);['dragenter','dragover'].forEach(e=>drop.addEventListener(e,x=>{x.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(e=>drop.addEventListener(e,x=>{x.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f?.type.startsWith('image/'))analyze(f)});historyFile.onchange=()=>historyFile.files[0]&&importCSV(historyFile.files[0]);$('demoBtn').onclick=()=>render([{home:'ARS',away:'CHE',odds:[1.85,3.7,4.1]},{home:'LIV',away:'TOT',odds:[2.08,3.75,3.18]},{home:'EVE',away:'NFO',odds:[2.55,3.55,2.58]}]);$('clearHistory').onclick=()=>{if(confirm('Clear imported virtual-match history?')){history=[];localStorage.removeItem(KEY);refreshStats()}};$('exportLog').onclick=exportLogs;refreshStats();
 function setStatus(t,p){status.textContent=t;progress.style.width=Math.min(100,p||0)+'%'}
 function loadImage(f){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(f)})}
-async function analyze(f){results.style.display='none';setStatus('Loading screenshot…',5);const img=await loadImage(f);setStatus('Locating fixture rows…',15);const rows=segmentRows(img);if(!rows.length){setStatus('No fixture rows detected. Use the original screenshot.',100);return}setStatus('OCR + fixture parsing…',25);const worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')setStatus(`Reading rows… ${Math.round((m.progress||0)*100)}%`,25+(m.progress||0)*60)}});const out=[];for(let i=0;i<rows.length;i++){const crop=prepareRow(img,rows[i]);const {data}=await worker.recognize(crop);const p=parseRow(data.text);if(p.home&&p.away&&p.odds.length>=3)out.push(p)}await worker.terminate();setStatus('Validating and scoring…',92);render(dedupe(out),rows.length);setStatus('Analysis complete.',100)}
+async function analyze(f){
+  results.style.display='none'; setStatus('Loading screenshot…',5);
+  try{
+    const img=await loadImage(f);
+    setStatus('Preparing OCR…',12);
+    const worker=await Tesseract.createWorker('eng',1,{logger:m=>{
+      if(m.status==='recognizing text') setStatus(`Reading screenshot… ${Math.round((m.progress||0)*100)}%`,20+(m.progress||0)*60);
+    }});
+    const out=[];
+    // First pass: OCR the complete screenshot. This is much more reliable than
+    // guessing row boundaries from pixel brightness, especially on dark/mobile
+    // virtual-football slips.
+    const full=await worker.recognize(img);
+    const fullText=full.data.text||'';
+    const lines=fullText.split(/\\r?\\n+/).map(norm).filter(Boolean);
+    for(let i=0;i<lines.length;i++){
+      const candidates=[lines[i], lines[i-1] ? lines[i-1]+' '+lines[i] : ''];
+      for(const s of candidates){
+        const p=parseRow(s);
+        if(p.home&&p.away&&p.odds.length>=3) out.push(p);
+      }
+    }
+
+    // Second pass: try detected rows only as a recovery/accuracy pass.
+    const rows=segmentRows(img);
+    if(rows.length && out.length<2){
+      for(let i=0;i<rows.length;i++){
+        const crop=prepareRow(img,rows[i]);
+        const r=await worker.recognize(crop);
+        const p=parseRow(r.data.text||'');
+        if(p.home&&p.away&&p.odds.length>=3) out.push(p);
+      }
+    }
+    await worker.terminate();
+
+    const clean=dedupe(out);
+    setStatus('Validating and scoring…',92);
+    if(clean.length){
+      render(clean,rows.length||clean.length);
+      setStatus(`Analysis complete — ${clean.length} game${clean.length===1?'':'s'} detected.`,100);
+    }else{
+      results.style.display='block';
+      summary.innerHTML='<span class="badge warn">OCR needs a clearer signal</span>';
+      cards.innerHTML='<div class="empty">No complete fixture with 3 valid 1X2 odds was found. Try a full screenshot with the odds visible, or use the demo to verify the predictor itself.</div>';
+      setStatus('No validated fixtures found.',100);
+    }
+  }catch(err){
+    console.error(err);
+    results.style.display='block';
+    summary.innerHTML='<span class="badge warn">Analysis error</span>';
+    cards.innerHTML=`<div class="empty">GoalMind could not process this image. Check your internet connection and reload the page, then try the screenshot again.<br><span class="tiny">${esc(err?.message||err)}</span></div>`;
+    setStatus('Analysis failed — see the message below.',100);
+  }
+}
 function segmentRows(img){const w=img.naturalWidth,h=img.naturalHeight;cv.width=w;cv.height=h;const c=cv.getContext('2d',{willReadFrequently:true});c.drawImage(img,0,0,w,h);const d=c.getImageData(0,0,w,h).data,s=[];for(let y=Math.floor(h*.12);y<Math.floor(h*.96);y++){let z=0;for(let x=Math.floor(w*.03);x<Math.floor(w*.97);x+=5){const i=(y*w+x)*4;z+=(d[i]+d[i+1]+d[i+2])/3}s.push([y,z/(w/5)])}const med=s.map(x=>x[1]).sort((a,b)=>a-b)[Math.floor(s.length/2)]||80,lines=[];for(let i=2;i<s.length-2;i++){if(s[i][1]<med*.84&&s[i][1]<s[i-1][1]&&s[i][1]<=s[i+1][1])lines.push(s[i][0])}const m=[];for(const y of lines)if(!m.length||y-m.at(-1)>9)m.push(y);const r=[];for(let i=1;i<m.length;i++){const a=m[i-1]+7,b=m[i]-7;if(b-a>35&&b-a<520)r.push([a,b])}return r.length>=2?r.slice(0,40):fallbackRows(h)}function fallbackRows(h){const a=Math.floor(h*.27),b=Math.floor(h*.91),step=Math.floor((b-a)/8);return Array.from({length:8},(_,i)=>[a+i*step+3,a+(i+1)*step-3])}function prepareRow(img,r){const w=img.naturalWidth,y=Math.max(0,r[0]),hh=Math.min(img.naturalHeight,r[1])-y;cv.width=w*2;cv.height=hh*2;const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,cv.width,cv.height);c.drawImage(img,0,y,w,hh,0,0,w*2,hh*2);return cv}
-function parseRow(t){let s=t.replace(/\n+/g,' ').replace(/[|]/g,' ').replace(/\s+/g,' ').trim();const nums=(s.match(/\b\d{1,2}[.,]\d{1,2}\b/g)||[]).map(x=>+x.replace(',','.')).filter(x=>x>=1.01&&x<=100);const odds=[];for(const n of nums)if(!odds.includes(n))odds.push(n);let toks=s.toUpperCase().replace(/[^A-Z0-9 ]/g,' ').split(/\s+/).filter(Boolean);toks=toks.filter(x=>!['VS','V','X','LIVE','ENG','ENGLAND','1X2','UP','BET','NEXT','ROUND','HOME','AWAY','DRAW'].includes(x)&&!/^\d+$/.test(x));const team=toks.filter(x=>/^[A-Z]{2,6}$/.test(x)).slice(0,2);return{home:team[0]||'',away:team[1]||'',odds:odds.slice(0,3)}}function dedupe(a){const s=new Set();return a.filter(x=>{const k=x.home+'|'+x.away+'|'+x.odds.join('|');if(s.has(k))return false;s.add(k);return true})}
+function parseRow(t){
+  let s=norm(String(t)).replace(/[|]/g,' ').replace(/[©®]/g,' ');
+  // OCR commonly turns decimal points into commas or inserts spaces around them.
+  s=s.replace(/(\d)\s*[.,]\s*(\d)/g,'$1.$2');
+  const nums=(s.match(/\b\d{1,2}\.\d{1,3}\b/g)||[])
+    .map(Number).filter(x=>x>=1.01&&x<=100);
+  const odds=[]; for(const n of nums) if(!odds.includes(n)) odds.push(n);
+
+  let toks=s.toUpperCase()
+    .replace(/[^A-Z0-9 ]/g,' ')
+    .split(/\s+/).filter(Boolean);
+
+  const stop=new Set(['VS','V','X','LIVE','ENG','ENGLAND','1X2','UP','BET','NEXT','ROUND','HOME','AWAY','DRAW','FOOTBALL','SOCCER','VIRTUAL','MATCH','TODAY','SPORTYBET']);
+  toks=toks.filter(x=>!stop.has(x)&&!/^\d+$/.test(x));
+
+  // Prefer short uppercase team codes/names before falling back to any useful words.
+  const team=toks.filter(x=>/^[A-Z]{2,12}$/.test(x)).slice(0,2);
+  return{home:team[0]||'',away:team[1]||'',odds:odds.slice(0,3)}
+}function dedupe(a){const s=new Set();return a.filter(x=>{const k=x.home+'|'+x.away+'|'+x.odds.join('|');if(s.has(k))return false;s.add(k);return true})}
 function market(o){const inv=o.map(x=>1/x),sum=inv.reduce((a,b)=>a+b,0),q=inv.map(x=>x/sum);return q}
 function teamModel(home,away){const rows=history.filter(x=>x.home===home||x.away===home||x.home===away||x.away===away);if(rows.length<4)return null;const allTeams=[...new Set(history.flatMap(x=>[x.home,x.away]))],rating=Object.fromEntries(allTeams.map(t=>[t,1500]));for(let pass=0;pass<4;pass++)for(const x of history){const rh=rating[x.home]||1500,ra=rating[x.away]||1500,exp=1/(1+Math.pow(10,(ra-rh)/400));const actual=x.home_score>x.away_score?1:x.home_score<x.away_score?0:.5;const k=24;rating[x.home]=(rating[x.home]||1500)+k*(actual-exp);rating[x.away]=(rating[x.away]||1500)+k*((1-actual)-(1-exp))}const rh=rating[home]||1500,ra=rating[away]||1500,diff=(rh-ra+55)/400;const hwin=1/(1+Math.pow(10,-diff));const recent=history.slice(-30).filter(x=>x.home===home||x.away===home);let pts=0,gf=0,ga=0,n=0;for(const x of recent){const isH=x.home===home,hs=isH?x.home_score:x.away_score,as=isH?x.away_score:x.home_score;pts+=hs>as?3:hs===as?1:0;gf+=hs;ga+=as;n++}const form=n?pts/(3*n):.5;const formAdj=(form-.5)*.16;let hw=Math.max(.05,Math.min(.85,hwin+formAdj));const aw=Math.max(.05,Math.min(.75,1-hw));const draw=Math.max(.08,1-hw-aw);const z=hw+draw+aw;return{q:[hw/z,draw/z,aw/z],n,ratings:[Math.round(rh),Math.round(ra)]}}
 function poisson(home,away){const rows=history.filter(x=>x.home===home||x.away===home||x.home===away||x.away===away);if(rows.length<6)return null;let gf=0,ga=0,n=0;for(const x of rows){if(x.home===home){gf+=x.home_score;ga+=x.away_score;n++}else if(x.away===home){gf+=x.away_score;ga+=x.home_score;n++}}const hg=n?Math.max(.15,Math.min(4,gf/n)):1.2;const ag=Math.max(.15,Math.min(4,ga/n));let h=0,d=0,a=0;for(let i=0;i<=6;i++)for(let j=0;j<=6;j++){const ph=Math.exp(-hg)*Math.pow(hg,i)/fact(i),pa=Math.exp(-ag)*Math.pow(ag,j)/fact(j),p=ph*pa;if(i>j)h+=p;else if(i===j)d+=p;else a+=p}return{q:[h,d,a],xg:[hg,ag]}}function fact(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r}
